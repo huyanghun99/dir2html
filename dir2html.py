@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 @author: kongkong 
-@version: 3.1 (Fixed and completed)
-@date: 2025-11-24
+@version: 3.2 (Fixed Icons via CDN)
+@date: 2025-11-25
 """
 import os
 import html
@@ -13,16 +13,16 @@ from pathlib import Path
 # 在这里修改你的设置
 CONFIG = {
     # 要扫描的根目录 (建议使用正斜杠 '/' 或双反斜杠 '\\')
-    "target_path": r'D:',
+    "target_path": r'D:\\workplace',
     # 输出的 HTML 文件名
-    "output_filename": '目录_v3.1.html',
+    "output_filename": '目录.html',
     # 初始加载时默认展开的目录深度 (1 表示只展开根目录)
     "default_expand_depth": 3,
     # 忽略配置
     "ignore": {
         "hidden_dirs": True,
         "hidden_files": True,
-        "dir_names": {'.git', '.svn', '__pycache__', 'node_modules', '.vscode', '$RECYCLE.BIN', 'System Volume Information'},
+        "dir_names": {'.git', '.svn', '__pycache__', 'node_modules', '.vscode', '$RECYCLE.BIN', 'System Volume Information', 'dist', 'build'},
         "file_names": {'.DS_Store', 'thumbs.db'},
     }
 }
@@ -43,7 +43,7 @@ def is_hidden(path):
 
 
 # --- 2. HTML 模板 (HTML Template) ---
-# [FIXED] 所有 CSS/JS 中的 { 和 } 已转义为 {{ 和 }}，仅保留 {file_tree}, {stats_summary}, {default_expand_depth} 作为 format 占位符
+# [FIXED] 移除了手动定义的 @font-face，改为使用 CDN 链接
 HTML_TEMPLATE = r"""
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -51,48 +51,9 @@ HTML_TEMPLATE = r"""
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>目录浏览器</title>
+    <!-- 引入 Font Awesome 6.4.0 CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Font Awesome 6.4.0 CSS (Embedded for offline use) */
-        /*!
-         * Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com
-         * License - https://fontawesome.com/license/free   (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License)
-         * Copyright 2023 Fonticons, Inc.
-         */
-        .fa,.fa-brands,.fa-classic,.fa-regular,.fa-sharp,.fa-solid,.fab,.far,.fas{{-moz-osx-font-smoothing:grayscale;-webkit-font-smoothing:antialiased;display:var(--fa-display,inline-block);font-style:normal;font-variant:normal;line-height:1;text-rendering:auto}}
-        .fa-solid,.fas{{font-weight:900}}
-        .fa-regular,.far{{font-weight:400}}
-        .fa-brands,.fab{{font-family:"Font Awesome 6 Brands";font-weight:400}}
-        
-        @font-face{{font-family:"Font Awesome 6 Free";font-style:normal;font-weight:900;font-display:block;src:url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-solid-900.woff2  ) format("woff2"),url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-solid-900.ttf  ) format("truetype")}}
-        .fa-solid,.fas{{font-weight:900}}
-        
-        @font-face{{font-family:"Font Awesome 6 Brands";font-style:normal;font-weight:400;font-display:block;src:url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-brands-400.woff2  ) format("woff2"),url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-brands-400.ttf  ) format("truetype")}}
-        .fa-brands,.fab{{font-weight:400}}
-        
-        .fa-python::before{{content:"\f3e2"}}
-        .fa-js-square::before{{content:"\f3b9"}}
-        .fa-html5::before{{content:"\f13b"}}
-        .fa-css3-alt::before{{content:"\f38b"}}
-        .fa-file-code::before{{content:"\f1c9"}}
-        .fa-java::before{{content:"\f4e4"}}
-        .fa-file-alt::before{{content:"\f15c"}}
-        .fa-markdown::before{{content:"\f60f"}}
-        .fa-file-pdf::before{{content:"\f1c1"}}
-        .fa-file-word::before{{content:"\f1c2"}}
-        .fa-file-excel::before{{content:"\f1c3"}}
-        .fa-file-powerpoint::before{{content:"\f1c4"}}
-        .fa-file-image::before{{content:"\f1c5"}}
-        .fa-file-audio::before{{content:"\f1c7"}}
-        .fa-file-video::before{{content:"\f1c8"}}
-        .fa-file-archive::before{{content:"\f1c6"}}
-        .fa-file::before{{content:"\f15b"}}
-        .fa-folder::before{{content:"\f07b"}}
-        .fa-folder-open::before{{content:"\f07c"}}
-        .fa-search::before{{content:"\f002"}}
-        .fa-expand-arrows-alt::before{{content:"\f31e"}}
-        .fa-compress-arrows-alt::before{{content:"\f78c"}}
-        .fa-ban::before{{content:"\f05e"}}
-        
         /* Custom Styles */
         :root {{
             --bg-main: #111827; --bg-card: #1F2937; --border: #374151;
@@ -157,7 +118,7 @@ HTML_TEMPLATE = r"""
         }}
         .folder-node > .node-content {{ cursor: pointer; }}
         .node-content:hover {{ background-color: rgba(55, 65, 81, 0.5); }}
-        .icon {{ margin-right: 10px; width: 16px; text-align: center; }}
+        .icon {{ margin-right: 10px; width: 20px; text-align: center; }} /* width adjusted for FA */
         .icon-folder {{ color: var(--primary); }}
         .icon-file {{ color: var(--text-main); opacity: 0.7; }}
         .item-name {{ text-decoration: none; color: var(--text-link); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
@@ -212,6 +173,7 @@ HTML_TEMPLATE = r"""
             const icon = folderLi.querySelector('.icon-folder');
             folderLi.classList.toggle('folder-open', isOpen);
             if (icon) {{
+                // 使用 toggle 切换 class，处理 Font Awesome 类名
                 icon.classList.toggle('fa-folder-open', isOpen);
                 icon.classList.toggle('fa-folder', !isOpen);
             }}
@@ -298,6 +260,7 @@ HTML_TEMPLATE = r"""
 """
 
 # --- 3. 文件图标映射 (Icon Mapping) ---
+# 这里的类名需要与 Font Awesome 6 兼容
 ICON_MAP = {
     '.py': 'fa-brands fa-python', '.js': 'fa-brands fa-js-square', '.html': 'fa-brands fa-html5',
     '.css': 'fa-brands fa-css3-alt', '.json': 'fa-solid fa-file-code', '.xml': 'fa-solid fa-file-code',
@@ -405,7 +368,7 @@ if __name__ == "__main__":
     file_tree_html = generator.generate_tree_html(CONFIG["target_path"])
     
     # 生成统计信息
-    stats_summary_text = f"共扫描到 {generator.folder_count} 个文件夹, {generator.file_count} 个文件。"
+    stats_summary_text = f"共 {generator.folder_count} 个文件夹, {generator.file_count} 个文件。"
     
     # 填充模板
     final_html = HTML_TEMPLATE.format(
@@ -420,5 +383,6 @@ if __name__ == "__main__":
         with open(output_filename, 'w', encoding='utf-8') as f:
             f.write(final_html)
         print(f"✓ 成功！文件已保存为: {os.path.abspath(output_filename)}")
+        print("  注意：图标显示需要连接互联网加载 CDN。")
     except IOError as e:
         print(f"✗ 错误：无法写入文件 {output_filename}。原因: {e}")
